@@ -1,7 +1,0 @@
-// Simple mock tool that echoes its arguments
-// Used for cross-platform testing
-
-fn main() {
-    let args: Vec<String> = std::env::args().skip(1).collect();
-    println!("Args: {}", args.join(" "));
-}
