@@ -154,7 +154,7 @@ Please ensure c2rust-{}{} is an executable file in $C2RUST_HOME/bin/",
 /// # Returns
 /// The exit code of the tool process
 fn run_tool(tool_name: &str, args: &[String]) -> i32 {
-    run_tool_with_env(tool_name, args, Vec::new())
+    run_tool_with_env(tool_name, args, &[])
 }
 
 /// Runs a tool with custom environment variables.
@@ -163,11 +163,11 @@ fn run_tool(tool_name: &str, args: &[String]) -> i32 {
 /// # Arguments
 /// * `tool_name` - The name of the tool to run (e.g., "build", "translate")
 /// * `args` - Command line arguments to pass to the tool
-/// * `env_vars` - Vector of (key, value) pairs for environment variables to set
+/// * `env_vars` - Slice of (key, value) pairs for environment variables to set
 ///
 /// # Returns
 /// The exit code of the tool process. On Unix, signals are mapped to 128+signal number.
-fn run_tool_with_env(tool_name: &str, args: &[String], env_vars: Vec<(&str, PathBuf)>) -> i32 {
+fn run_tool_with_env(tool_name: &str, args: &[String], env_vars: &[(&str, PathBuf)]) -> i32 {
     let tool_path = match get_tool_path(tool_name) {
         Ok(path) => path,
         Err(e) => {
@@ -323,7 +323,7 @@ fn main() {
                 }
             }
             
-            run_tool_with_env("build", &args, env_vars)
+            run_tool_with_env("build", &args, &env_vars)
         }
         
         Commands::Test { feature, test_cmd } => {
@@ -398,7 +398,7 @@ fn main() {
                 }
             }
             
-            run_tool_with_env("translate", &args, env_vars)
+            run_tool_with_env("translate", &args, &env_vars)
         }
     };
     
