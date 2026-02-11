@@ -66,18 +66,18 @@ fn get_c2rust_home() -> Result<PathBuf, String> {
     match env::var("C2RUST_HOME") {
         Ok(home) => {
             let path = PathBuf::from(home);
-            if !path.exists() {
+            if !path.is_dir() {
                 return Err(format!(
-                    "Error: C2RUST_HOME directory does not exist: {}\n\
+                    "Error: C2RUST_HOME is not a directory: {}\n\
 Please set C2RUST_HOME to the root directory of your c2rust installation.\n\
 Example: export C2RUST_HOME=/path/to/c2rust",
                     path.display()
                 ));
             }
             let bin_dir = path.join("bin");
-            if !bin_dir.exists() {
+            if !bin_dir.is_dir() {
                 return Err(format!(
-                    "Error: C2RUST_HOME/bin directory does not exist: {}\n\
+                    "Error: C2RUST_HOME/bin is not a directory: {}\n\
 Please ensure the bin directory exists in your c2rust installation.",
                     bin_dir.display()
                 ));
@@ -101,7 +101,7 @@ fn get_tool_path(tool_name: &str) -> Result<PathBuf, String> {
     if !tool_path.exists() {
         return Err(format!(
             "Error: Tool '{}' not found at path: {}\n\
-             Please ensure the tool is installed in $C2RUST_HOME/bin/",
+Please ensure the tool is installed in $C2RUST_HOME/bin/",
             format!("c2rust-{}{}", tool_name, std::env::consts::EXE_SUFFIX),
             tool_path.display()
         ));
@@ -124,7 +124,17 @@ fn run_tool(tool_name: &str, args: &[String]) -> i32 {
         .status();
     
     match status {
-        Ok(exit_status) => exit_status.code().unwrap_or(1),
+        Ok(exit_status) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::ExitStatusExt;
+                exit_status.code().or_else(|| exit_status.signal().map(|sig| 128 + sig)).unwrap_or(1)
+            }
+            #[cfg(not(unix))]
+            {
+                exit_status.code().unwrap_or(1)
+            }
+        }
         Err(e) => {
             eprintln!("Error executing tool: {}", e);
             1

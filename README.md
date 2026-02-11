@@ -32,7 +32,7 @@ cd c2rust
 cargo build --release
 ```
 
-The binary will be available at `target/release/c2rust`.
+The binary will be available at `target/release/c2rust` (or `c2rust.exe` on Windows).
 
 ### Environment Setup
 
@@ -121,9 +121,9 @@ c2rust translate --show-full-output
 ```
 
 **Options:**
-- `--feature <name>` - Specify a feature name (default: "default")
+- `--feature <name>` - Specify a feature name (optional)
 - `--allow-all` - Allow all unsafe operations
-- `--max-fix-attempts <n>` - Maximum number of fix attempts (default: 10)
+- `--max-fix-attempts <n>` - Maximum number of fix attempts (optional, uses translator's default if omitted)
 - `--show-full-output` - Show full output during translation
 
 ## Examples
