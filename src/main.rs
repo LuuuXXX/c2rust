@@ -159,6 +159,83 @@ fn run_tool(tool_name: &str, args: &[String]) -> i32 {
     }
 }
 
+fn run_tool_with_env(tool_name: &str, args: &[String], env_vars: Vec<(&str, PathBuf)>) -> i32 {
+    let tool_path = match get_tool_path(tool_name) {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("{}", e);
+            return 1;
+        }
+    };
+    
+    let mut cmd = Command::new(tool_path);
+    cmd.args(args);
+    
+    // Set environment variables
+    for (key, value) in env_vars {
+        cmd.env(key, value);
+    }
+    
+    let status = cmd.status();
+    
+    match status {
+        Ok(exit_status) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::process::ExitStatusExt;
+                // Return exit code if available, otherwise map Unix signal to 128+signal
+                if let Some(code) = exit_status.code() {
+                    code
+                } else if let Some(signal) = exit_status.signal() {
+                    128 + signal
+                } else {
+                    1
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                exit_status.code().unwrap_or(1)
+            }
+        }
+        Err(e) => {
+            eprintln!("Error executing tool: {}", e);
+            1
+        }
+    }
+}
+
+fn get_lib_path(lib_name: &str) -> Result<PathBuf, String> {
+    let c2rust_home = get_c2rust_home()?;
+    let lib_path = c2rust_home.join("lib").join(lib_name);
+    
+    if !lib_path.exists() {
+        return Err(format!(
+            "Warning: Library '{}' not found at path: {}\n\
+Please ensure the library is installed in $C2RUST_HOME/lib/",
+            lib_name,
+            lib_path.display()
+        ));
+    }
+    
+    Ok(lib_path)
+}
+
+fn get_python_dir(dir_name: &str) -> Result<PathBuf, String> {
+    let c2rust_home = get_c2rust_home()?;
+    let python_dir = c2rust_home.join("python").join(dir_name);
+    
+    if !python_dir.exists() {
+        return Err(format!(
+            "Warning: Python directory '{}' not found at path: {}\n\
+Please ensure the directory exists in $C2RUST_HOME/python/",
+            dir_name,
+            python_dir.display()
+        ));
+    }
+    
+    Ok(python_dir)
+}
+
 fn main() {
     let cli = Cli::parse();
     
@@ -182,7 +259,18 @@ fn main() {
             args.push("--".to_string());
             args.extend(build_cmd);
             
-            run_tool("build", &args)
+            // Set C2RUST_HOOK_LIB environment variable
+            let mut env_vars = Vec::new();
+            match get_lib_path("libhook.so") {
+                Ok(lib_path) => {
+                    env_vars.push(("C2RUST_HOOK_LIB", lib_path));
+                }
+                Err(e) => {
+                    eprintln!("{}", e);
+                }
+            }
+            
+            run_tool_with_env("build", &args, env_vars)
         }
         
         Commands::Test { feature, test_cmd } => {
@@ -234,7 +322,26 @@ fn main() {
                 args.push("--show-full-output".to_string());
             }
             
-            run_tool("translate", &args)
+            // Set environment variables for translate command
+            let mut env_vars = Vec::new();
+            match get_python_dir("translate_and_fix") {
+                Ok(dir_path) => {
+                    env_vars.push(("C2RUST_TRANSLATE_DIR", dir_path));
+                }
+                Err(e) => {
+                    eprintln!("{}", e);
+                }
+            }
+            match get_lib_path("libc2rust-hybrid-build.so") {
+                Ok(lib_path) => {
+                    env_vars.push(("C2RUST_HYBRID_BUILD_LIB", lib_path));
+                }
+                Err(e) => {
+                    eprintln!("{}", e);
+                }
+            }
+            
+            run_tool_with_env("translate", &args, env_vars)
         }
     };
     

@@ -243,3 +243,173 @@ fn test_build_requires_separator() {
         eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
     }
 }
+
+#[test]
+fn test_build_env_vars_with_lib() {
+    // Create a temporary directory as C2RUST_HOME with lib directory and mock build tool
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_build_env_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    let lib_dir = temp_dir.join("lib");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    fs::create_dir_all(&lib_dir).expect("Failed to create lib directory");
+    
+    // Create the libhook.so file
+    let hook_lib_path = lib_dir.join("libhook.so");
+    fs::write(&hook_lib_path, "mock library").expect("Failed to create libhook.so");
+    
+    #[cfg(unix)]
+    {
+        // Create a mock c2rust-build script that prints environment variables
+        let mock_script = "#!/bin/sh\necho \"C2RUST_HOOK_LIB=$C2RUST_HOOK_LIB\"\n";
+        let script_path = bin_dir.join("c2rust-build");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        let output = Command::new(get_binary_path())
+            .args(&["build", "--", "make"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Check that C2RUST_HOOK_LIB is set correctly
+        assert!(stdout.contains("C2RUST_HOOK_LIB="));
+        assert!(stdout.contains("libhook.so"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
+
+#[test]
+fn test_build_env_vars_without_lib() {
+    // Create a temporary directory as C2RUST_HOME without lib directory
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_build_no_lib_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    #[cfg(unix)]
+    {
+        // Create a mock c2rust-build script that prints environment variables
+        let mock_script = "#!/bin/sh\necho \"C2RUST_HOOK_LIB=$C2RUST_HOOK_LIB\"\n";
+        let script_path = bin_dir.join("c2rust-build");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        let output = Command::new(get_binary_path())
+            .args(&["build", "--", "make"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        // Should still succeed even if lib is not found, but print warning
+        assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Check for warning message
+        assert!(stderr.contains("Warning") || stderr.contains("libhook.so"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
+
+#[test]
+fn test_translate_env_vars_with_dirs() {
+    // Create a temporary directory as C2RUST_HOME with python and lib directories
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_translate_env_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    let lib_dir = temp_dir.join("lib");
+    let python_dir = temp_dir.join("python").join("translate_and_fix");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    fs::create_dir_all(&lib_dir).expect("Failed to create lib directory");
+    fs::create_dir_all(&python_dir).expect("Failed to create python directory");
+    
+    // Create the required files
+    let hybrid_lib_path = lib_dir.join("libc2rust-hybrid-build.so");
+    fs::write(&hybrid_lib_path, "mock library").expect("Failed to create libc2rust-hybrid-build.so");
+    let python_file_path = python_dir.join("script.py");
+    fs::write(&python_file_path, "# mock script").expect("Failed to create script.py");
+    
+    #[cfg(unix)]
+    {
+        // Create a mock c2rust-translate script that prints environment variables
+        let mock_script = "#!/bin/sh\necho \"C2RUST_TRANSLATE_DIR=$C2RUST_TRANSLATE_DIR\"\necho \"C2RUST_HYBRID_BUILD_LIB=$C2RUST_HYBRID_BUILD_LIB\"\n";
+        let script_path = bin_dir.join("c2rust-translate");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        let output = Command::new(get_binary_path())
+            .args(&["translate"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Check that both environment variables are set correctly
+        assert!(stdout.contains("C2RUST_TRANSLATE_DIR="));
+        assert!(stdout.contains("translate_and_fix"));
+        assert!(stdout.contains("C2RUST_HYBRID_BUILD_LIB="));
+        assert!(stdout.contains("libc2rust-hybrid-build.so"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
+
+#[test]
+fn test_translate_env_vars_without_dirs() {
+    // Create a temporary directory as C2RUST_HOME without python and lib directories
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_translate_no_dirs_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    #[cfg(unix)]
+    {
+        // Create a mock c2rust-translate script that prints environment variables
+        let mock_script = "#!/bin/sh\necho \"C2RUST_TRANSLATE_DIR=$C2RUST_TRANSLATE_DIR\"\necho \"C2RUST_HYBRID_BUILD_LIB=$C2RUST_HYBRID_BUILD_LIB\"\n";
+        let script_path = bin_dir.join("c2rust-translate");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        let output = Command::new(get_binary_path())
+            .args(&["translate"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        // Should still succeed even if directories are not found, but print warnings
+        assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Check for warning messages
+        assert!(stderr.contains("Warning"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
