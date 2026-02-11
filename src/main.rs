@@ -75,13 +75,15 @@ fn get_c2rust_home() -> Result<PathBuf, String> {
 
 fn get_tool_path(tool_name: &str) -> Result<PathBuf, String> {
     let c2rust_home = get_c2rust_home()?;
-    let tool_path = c2rust_home.join("bin").join(format!("c2rust-{}", tool_name));
+    let tool_path = c2rust_home
+        .join("bin")
+        .join(format!("c2rust-{}{}", tool_name, std::env::consts::EXE_SUFFIX));
     
     if !tool_path.exists() {
         return Err(format!(
             "Error: Tool '{}' not found at path: {}\n\
              Please ensure the tool is installed in $C2RUST_HOME/bin/",
-            format!("c2rust-{}", tool_name),
+            format!("c2rust-{}{}", tool_name, std::env::consts::EXE_SUFFIX),
             tool_path.display()
         ));
     }

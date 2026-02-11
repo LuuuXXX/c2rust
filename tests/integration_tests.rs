@@ -103,7 +103,7 @@ fn test_translate_help() {
 fn test_tool_not_found() {
     // Create a temporary directory as C2RUST_HOME
     let temp_dir = std::env::temp_dir().join(format!("c2rust_test_{}", std::process::id()));
-    let _ = fs::create_dir_all(&temp_dir);
+    fs::create_dir_all(&temp_dir).expect("Failed to create temporary C2RUST_HOME directory");
     
     let output = Command::new(get_binary_path())
         .arg("init")
@@ -116,5 +116,85 @@ fn test_tool_not_found() {
     assert!(stderr.contains("Tool 'c2rust-init' not found"));
     
     // Clean up
-    let _ = fs::remove_dir_all(&temp_dir);
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
+
+#[test]
+fn test_build_argument_forwarding() {
+    // Create a temporary directory as C2RUST_HOME with a mock build tool
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_build_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    // Create a mock c2rust-build script that echoes its arguments
+    #[cfg(unix)]
+    {
+        let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+        let script_path = bin_dir.join("c2rust-build");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        // Make it executable
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        let output = Command::new(get_binary_path())
+            .args(&["build", "--feature", "test_feature", "--no-interactive", "--", "make", "all"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("--feature"));
+        assert!(stdout.contains("test_feature"));
+        assert!(stdout.contains("--no-interactive"));
+        assert!(stdout.contains("make"));
+        assert!(stdout.contains("all"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
+
+#[test]
+fn test_translate_argument_forwarding() {
+    // Create a temporary directory as C2RUST_HOME with a mock translate tool
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_translate_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    #[cfg(unix)]
+    {
+        let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+        let script_path = bin_dir.join("c2rust-translate");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        let output = Command::new(get_binary_path())
+            .args(&["translate", "--feature", "custom", "--allow-all", "--max-fix-attempts", "20", "--show-full-output"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert!(stdout.contains("--feature"));
+        assert!(stdout.contains("custom"));
+        assert!(stdout.contains("--allow-all"));
+        assert!(stdout.contains("--max-fix-attempts"));
+        assert!(stdout.contains("20"));
+        assert!(stdout.contains("--show-full-output"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
 }
