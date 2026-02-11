@@ -130,6 +130,37 @@ fn test_tool_not_found() {
 
 #[test]
 #[cfg(unix)]
+fn test_init_argument_forwarding() {
+    // Create a temporary directory as C2RUST_HOME with a mock init tool
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+    let bin_dir = temp_dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    // Create a mock c2rust-init script that echoes its arguments
+    let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+    let script_path = bin_dir.join("c2rust-init");
+    fs::write(&script_path, mock_script).expect("Failed to write mock script");
+    // Make it executable
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&script_path).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&script_path, perms).unwrap();
+    
+    let output = Command::new(get_binary_path())
+        .arg("init")
+        .env("C2RUST_HOME", temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+    
+    assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("init"), "Expected 'init' subcommand in output");
+    
+    // temp_dir is automatically cleaned up when it goes out of scope
+}
+
+#[test]
+#[cfg(unix)]
 fn test_build_argument_forwarding() {
     // Create a temporary directory as C2RUST_HOME with a mock build tool
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
@@ -154,6 +185,7 @@ fn test_build_argument_forwarding() {
     
     assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
     let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("build"), "Expected 'build' subcommand in output");
     assert!(stdout.contains("--feature"));
     assert!(stdout.contains("test_feature"));
     assert!(stdout.contains("--no-interactive"));
@@ -188,6 +220,7 @@ fn test_translate_argument_forwarding() {
     
     assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
     let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("translate"), "Expected 'translate' subcommand in output");
     assert!(stdout.contains("--feature"));
     assert!(stdout.contains("custom"));
     assert!(stdout.contains("--allow-all"));
@@ -224,7 +257,8 @@ fn test_build_requires_separator() {
     
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    // Should forward with -- separator to underlying tool
+    // Should forward with -- separator to underlying tool and include subcommand name
+    assert!(stdout.contains("build"), "Expected 'build' subcommand in output");
     assert!(stdout.contains("--"));
     assert!(stdout.contains("make"));
     assert!(stdout.contains("all"));
@@ -380,6 +414,74 @@ fn test_translate_env_vars_without_dirs() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     // Check for warning messages
     assert!(stderr.contains("Warning"));
+    
+    // temp_dir is automatically cleaned up when it goes out of scope
+}
+
+#[test]
+#[cfg(unix)]
+fn test_test_argument_forwarding() {
+    // Create a temporary directory as C2RUST_HOME with a mock test tool
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+    let bin_dir = temp_dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    // Create a mock c2rust-test script that echoes its arguments
+    let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+    let script_path = bin_dir.join("c2rust-test");
+    fs::write(&script_path, mock_script).expect("Failed to write mock script");
+    
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&script_path).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&script_path, perms).unwrap();
+    
+    let output = Command::new(get_binary_path())
+        .args(&["test", "--feature", "test_feature", "--", "make", "test"])
+        .env("C2RUST_HOME", temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+    
+    assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("test"), "Expected 'test' subcommand in output");
+    assert!(stdout.contains("--feature"));
+    assert!(stdout.contains("test_feature"));
+    assert!(stdout.contains("make"));
+    
+    // temp_dir is automatically cleaned up when it goes out of scope
+}
+
+#[test]
+#[cfg(unix)]
+fn test_clean_argument_forwarding() {
+    // Create a temporary directory as C2RUST_HOME with a mock clean tool
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+    let bin_dir = temp_dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    // Create a mock c2rust-clean script that echoes its arguments
+    let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+    let script_path = bin_dir.join("c2rust-clean");
+    fs::write(&script_path, mock_script).expect("Failed to write mock script");
+    
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&script_path).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&script_path, perms).unwrap();
+    
+    let output = Command::new(get_binary_path())
+        .args(&["clean", "--feature", "clean_feature", "--", "make", "clean"])
+        .env("C2RUST_HOME", temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+    
+    assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("clean"), "Expected 'clean' subcommand in output");
+    assert!(stdout.contains("--feature"));
+    assert!(stdout.contains("clean_feature"));
+    assert!(stdout.contains("make"));
     
     // temp_dir is automatically cleaned up when it goes out of scope
 }
