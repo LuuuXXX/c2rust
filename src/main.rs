@@ -3,6 +3,30 @@ use std::env;
 use std::path::PathBuf;
 use std::process::{Command, exit};
 
+/// Returns the platform-specific dynamic library file extension.
+/// - Linux: .so
+/// - macOS: .dylib
+/// - Windows: .dll
+fn get_lib_extension() -> &'static str {
+    if cfg!(target_os = "macos") {
+        ".dylib"
+    } else if cfg!(target_os = "windows") {
+        ".dll"
+    } else {
+        ".so"
+    }
+}
+
+/// Constructs a platform-specific library filename.
+/// Examples:
+/// - Linux: libhook -> libhook.so
+/// - macOS: libhook -> libhook.dylib
+/// - Windows: libhook -> libhook.dll
+fn get_lib_filename(base_name: &str) -> String {
+    format!("{}{}", base_name, get_lib_extension())
+}
+
+
 #[derive(Parser)]
 #[command(name = "c2rust")]
 #[command(about = "C to Rust translation and build tool")]
@@ -130,42 +154,7 @@ Please ensure c2rust-{}{} is an executable file in $C2RUST_HOME/bin/",
 /// # Returns
 /// The exit code of the tool process
 fn run_tool(tool_name: &str, args: &[String]) -> i32 {
-    let tool_path = match get_tool_path(tool_name) {
-        Ok(path) => path,
-        Err(e) => {
-            eprintln!("{}", e);
-            return 1;
-        }
-    };
-    
-    let status = Command::new(tool_path)
-        .args(args)
-        .status();
-    
-    match status {
-        Ok(exit_status) => {
-            #[cfg(unix)]
-            {
-                use std::os::unix::process::ExitStatusExt;
-                // Return exit code if available, otherwise map Unix signal to 128+signal
-                if let Some(code) = exit_status.code() {
-                    code
-                } else if let Some(signal) = exit_status.signal() {
-                    128 + signal
-                } else {
-                    1
-                }
-            }
-            #[cfg(not(unix))]
-            {
-                exit_status.code().unwrap_or(1)
-            }
-        }
-        Err(e) => {
-            eprintln!("Error executing tool: {}", e);
-            1
-        }
-    }
+    run_tool_with_env(tool_name, args, Vec::new())
 }
 
 /// Runs a tool with custom environment variables.
@@ -248,6 +237,16 @@ Please ensure the library is installed in $C2RUST_HOME/lib/",
         ));
     }
     
+    if !lib_path.is_file() {
+        return Err(format!(
+            "Warning: Path '{}' for library '{}' exists but is not a file.\n\
+Please ensure that '{}' is a regular file in $C2RUST_HOME/lib/",
+            lib_path.display(),
+            lib_name,
+            lib_name
+        ));
+    }
+    
     Ok(lib_path)
 }
 
@@ -273,6 +272,15 @@ fn get_python_dir(dir_name: &str) -> Result<PathBuf, String> {
 Please ensure the directory exists in $C2RUST_HOME/python/",
             dir_name,
             python_dir.display()
+        ));
+    }
+    
+    if !python_dir.is_dir() {
+        return Err(format!(
+            "Warning: Path '{}' exists but is not a directory.\n\
+Expected a directory named '{}' under $C2RUST_HOME/python/",
+            python_dir.display(),
+            dir_name
         ));
     }
     
@@ -302,14 +310,16 @@ fn main() {
             args.push("--".to_string());
             args.extend(build_cmd);
             
-            // Set C2RUST_HOOK_LIB environment variable
+            // Set C2RUST_HOOK_LIB environment variable, unless the user has already provided one
             let mut env_vars = Vec::new();
-            match get_lib_path("libhook.so") {
-                Ok(lib_path) => {
-                    env_vars.push(("C2RUST_HOOK_LIB", lib_path));
-                }
-                Err(e) => {
-                    eprintln!("{}", e);
+            if env::var("C2RUST_HOOK_LIB").is_err() {
+                match get_lib_path(&get_lib_filename("libhook")) {
+                    Ok(lib_path) => {
+                        env_vars.push(("C2RUST_HOOK_LIB", lib_path));
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
                 }
             }
             
@@ -365,22 +375,26 @@ fn main() {
                 args.push("--show-full-output".to_string());
             }
             
-            // Set environment variables for translate command
+            // Set environment variables for translate command, unless the user has already provided them
             let mut env_vars = Vec::new();
-            match get_python_dir("translate_and_fix") {
-                Ok(dir_path) => {
-                    env_vars.push(("C2RUST_TRANSLATE_DIR", dir_path));
-                }
-                Err(e) => {
-                    eprintln!("{}", e);
+            if env::var("C2RUST_TRANSLATE_DIR").is_err() {
+                match get_python_dir("translate_and_fix") {
+                    Ok(dir_path) => {
+                        env_vars.push(("C2RUST_TRANSLATE_DIR", dir_path));
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
                 }
             }
-            match get_lib_path("libc2rust-hybrid-build.so") {
-                Ok(lib_path) => {
-                    env_vars.push(("C2RUST_HYBRID_BUILD_LIB", lib_path));
-                }
-                Err(e) => {
-                    eprintln!("{}", e);
+            if env::var("C2RUST_HYBRID_BUILD_LIB").is_err() {
+                match get_lib_path(&get_lib_filename("libc2rust-hybrid-build")) {
+                    Ok(lib_path) => {
+                        env_vars.push(("C2RUST_HYBRID_BUILD_LIB", lib_path));
+                    }
+                    Err(e) => {
+                        eprintln!("{}", e);
+                    }
                 }
             }
             
