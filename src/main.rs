@@ -128,7 +128,14 @@ fn run_tool(tool_name: &str, args: &[String]) -> i32 {
             #[cfg(unix)]
             {
                 use std::os::unix::process::ExitStatusExt;
-                exit_status.code().or_else(|| exit_status.signal().map(|sig| 128 + sig)).unwrap_or(1)
+                // Return exit code if available, otherwise map Unix signal to 128+signal
+                if let Some(code) = exit_status.code() {
+                    code
+                } else if let Some(signal) = exit_status.signal() {
+                    128 + signal
+                } else {
+                    1
+                }
             }
             #[cfg(not(unix))]
             {
