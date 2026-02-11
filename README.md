@@ -74,12 +74,12 @@ Execute build commands for your C project:
 ```bash
 c2rust build -- make
 c2rust build --feature <name> -- make all
-c2rust build --no_interactive -- cmake --build .
+c2rust build --no-interactive -- cmake --build .
 ```
 
 **Options:**
 - `--feature <name>` - Specify a feature name
-- `--no_interactive` - Run in non-interactive mode
+- `--no-interactive` - Run in non-interactive mode
 - `-- <build_cmd>` - Build command to execute (required)
 
 #### 3. Test
@@ -115,16 +115,16 @@ Translate C code to Rust:
 ```bash
 c2rust translate
 c2rust translate --feature <name>
-c2rust translate --allow_all
-c2rust translate --max_fix_attempts 20
-c2rust translate --show_full_output
+c2rust translate --allow-all
+c2rust translate --max-fix-attempts 20
+c2rust translate --show-full-output
 ```
 
 **Options:**
 - `--feature <name>` - Specify a feature name (default: "default")
-- `--allow_all` - Allow all unsafe operations
-- `--max_fix_attempts <n>` - Maximum number of fix attempts (default: 10)
-- `--show_full_output` - Show full output during translation
+- `--allow-all` - Allow all unsafe operations
+- `--max-fix-attempts <n>` - Maximum number of fix attempts (default: 10)
+- `--show-full-output` - Show full output during translation
 
 ## Examples
 
@@ -154,10 +154,10 @@ c2rust clean -- make clean
 c2rust build --feature experimental -- make all
 
 # Translate with custom settings
-c2rust translate --feature advanced --max_fix_attempts 20 --allow_all
+c2rust translate --feature advanced --max-fix-attempts 20 --allow-all
 
 # Non-interactive build
-c2rust build --no_interactive -- cmake --build .
+c2rust build --no-interactive -- cmake --build .
 ```
 
 ## Error Handling

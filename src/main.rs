@@ -128,7 +128,7 @@ fn main() {
             }
             
             if no_interactive {
-                args.push("--no_interactive".to_string());
+                args.push("--no-interactive".to_string());
             }
             
             args.push("--".to_string());
@@ -172,14 +172,14 @@ fn main() {
             args.push(feature);
             
             if allow_all {
-                args.push("--allow_all".to_string());
+                args.push("--allow-all".to_string());
             }
             
-            args.push("--max_fix_attempts".to_string());
+            args.push("--max-fix-attempts".to_string());
             args.push(max_fix_attempts.to_string());
             
             if show_full_output {
-                args.push("--show_full_output".to_string());
+                args.push("--show-full-output".to_string());
             }
             
             run_tool("translate", &args)
