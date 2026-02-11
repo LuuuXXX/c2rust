@@ -107,6 +107,16 @@ Please ensure the tool is installed in $C2RUST_HOME/bin/",
         ));
     }
     
+    if !tool_path.is_file() {
+        return Err(format!(
+            "Error: Tool path exists but is not a file: {}\n\
+Please ensure c2rust-{}{} is an executable file in $C2RUST_HOME/bin/",
+            tool_path.display(),
+            tool_name,
+            std::env::consts::EXE_SUFFIX
+        ));
+    }
+    
     Ok(tool_path)
 }
 

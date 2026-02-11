@@ -187,6 +187,8 @@ Error: Tool 'c2rust-<command>' not found at path: /path/to/c2rust/bin/c2rust-<co
 Please ensure the tool is installed in $C2RUST_HOME/bin/
 ```
 
+Note: On Windows, tool names include the `.exe` extension (e.g., `c2rust-init.exe`).
+
 Ensure that the required subtools are installed in `$C2RUST_HOME/bin/`.
 
 ## Development

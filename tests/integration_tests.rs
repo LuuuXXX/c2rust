@@ -146,6 +146,7 @@ fn test_build_argument_forwarding() {
             .output()
             .expect("Failed to execute command");
         
+        assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("--feature"));
         assert!(stdout.contains("test_feature"));
@@ -186,6 +187,7 @@ fn test_translate_argument_forwarding() {
             .output()
             .expect("Failed to execute command");
         
+        assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
         let stdout = String::from_utf8_lossy(&output.stdout);
         assert!(stdout.contains("--feature"));
         assert!(stdout.contains("custom"));
