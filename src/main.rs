@@ -77,7 +77,7 @@ Example: export C2RUST_HOME=/path/to/c2rust",
             let bin_dir = path.join("bin");
             if !bin_dir.exists() {
                 return Err(format!(
-                    "Error: $C2RUST_HOME/bin directory does not exist: {}\n\
+                    "Error: C2RUST_HOME/bin directory does not exist: {}\n\
 Please ensure the bin directory exists in your c2rust installation.",
                     bin_dir.display()
                 ));
