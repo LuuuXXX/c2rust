@@ -127,6 +127,8 @@ fn test_build_argument_forwarding() {
     fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
     
     // Create a mock c2rust-build script that echoes its arguments
+    // Note: This test uses a Unix shell script for simplicity. The core argument
+    // parsing and forwarding logic is platform-agnostic and tested via clap.
     #[cfg(unix)]
     {
         let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
@@ -165,6 +167,8 @@ fn test_translate_argument_forwarding() {
     let bin_dir = temp_dir.join("bin");
     fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
     
+    // Note: This test uses a Unix shell script for simplicity. The core argument
+    // parsing and forwarding logic is platform-agnostic and tested via clap.
     #[cfg(unix)]
     {
         let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
@@ -204,6 +208,8 @@ fn test_build_requires_separator() {
     let bin_dir = temp_dir.join("bin");
     fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
     
+    // Note: This test uses a Unix shell script for simplicity. The core argument
+    // parsing and forwarding logic is platform-agnostic and tested via clap.
     #[cfg(unix)]
     {
         let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
