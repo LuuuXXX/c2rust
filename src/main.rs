@@ -24,7 +24,7 @@ enum Commands {
         #[arg(long)]
         no_interactive: bool,
         
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
+        #[arg(last = true, allow_hyphen_values = true, required = true)]
         build_cmd: Vec<String>,
     },
     
@@ -33,7 +33,7 @@ enum Commands {
         #[arg(long)]
         feature: Option<String>,
         
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
+        #[arg(last = true, allow_hyphen_values = true, required = true)]
         test_cmd: Vec<String>,
     },
     
@@ -42,7 +42,7 @@ enum Commands {
         #[arg(long)]
         feature: Option<String>,
         
-        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
+        #[arg(last = true, allow_hyphen_values = true, required = true)]
         clean_cmd: Vec<String>,
     },
     
@@ -131,10 +131,8 @@ fn main() {
                 args.push("--no_interactive".to_string());
             }
             
-            if !build_cmd.is_empty() {
-                args.push("--".to_string());
-                args.extend(build_cmd);
-            }
+            args.push("--".to_string());
+            args.extend(build_cmd);
             
             run_tool("build", &args)
         }
@@ -147,10 +145,8 @@ fn main() {
                 args.push(f);
             }
             
-            if !test_cmd.is_empty() {
-                args.push("--".to_string());
-                args.extend(test_cmd);
-            }
+            args.push("--".to_string());
+            args.extend(test_cmd);
             
             run_tool("test", &args)
         }
@@ -163,10 +159,8 @@ fn main() {
                 args.push(f);
             }
             
-            if !clean_cmd.is_empty() {
-                args.push("--".to_string());
-                args.extend(clean_cmd);
-            }
+            args.push("--".to_string());
+            args.extend(clean_cmd);
             
             run_tool("clean", &args)
         }

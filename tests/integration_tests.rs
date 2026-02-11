@@ -102,7 +102,7 @@ fn test_translate_help() {
 #[test]
 fn test_tool_not_found() {
     // Create a temporary directory as C2RUST_HOME
-    let temp_dir = std::env::temp_dir().join("c2rust_test");
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_{}", std::process::id()));
     let _ = fs::create_dir_all(&temp_dir);
     
     let output = Command::new(get_binary_path())
