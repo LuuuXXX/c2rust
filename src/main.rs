@@ -292,11 +292,12 @@ fn main() {
     
     let exit_code = match cli.command {
         Commands::Init => {
-            run_tool("init", &[])
+            run_tool("init", &["init".to_string()])
         }
         
         Commands::Build { feature, no_interactive, build_cmd } => {
             let mut args = Vec::new();
+            args.push("build".to_string());
             
             if let Some(f) = feature {
                 args.push("--feature".to_string());
@@ -328,6 +329,7 @@ fn main() {
         
         Commands::Test { feature, test_cmd } => {
             let mut args = Vec::new();
+            args.push("test".to_string());
             
             if let Some(f) = feature {
                 args.push("--feature".to_string());
@@ -342,6 +344,7 @@ fn main() {
         
         Commands::Clean { feature, clean_cmd } => {
             let mut args = Vec::new();
+            args.push("clean".to_string());
             
             if let Some(f) = feature {
                 args.push("--feature".to_string());
@@ -356,6 +359,7 @@ fn main() {
         
         Commands::Translate { feature, allow_all, max_fix_attempts, show_full_output } => {
             let mut args = Vec::new();
+            args.push("translate".to_string());
             
             if let Some(f) = feature {
                 args.push("--feature".to_string());
