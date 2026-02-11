@@ -24,7 +24,7 @@ enum Commands {
         #[arg(long)]
         no_interactive: bool,
         
-        #[arg(last = true, allow_hyphen_values = true, required = true)]
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
         build_cmd: Vec<String>,
     },
     
@@ -33,7 +33,7 @@ enum Commands {
         #[arg(long)]
         feature: Option<String>,
         
-        #[arg(last = true, allow_hyphen_values = true, required = true)]
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
         test_cmd: Vec<String>,
     },
     
@@ -42,20 +42,20 @@ enum Commands {
         #[arg(long)]
         feature: Option<String>,
         
-        #[arg(last = true, allow_hyphen_values = true, required = true)]
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true, required = true)]
         clean_cmd: Vec<String>,
     },
     
     /// 翻译 C 代码为 Rust
     Translate {
-        #[arg(long, default_value = "default")]
-        feature: String,
+        #[arg(long)]
+        feature: Option<String>,
         
         #[arg(long)]
         allow_all: bool,
         
-        #[arg(long, default_value = "10")]
-        max_fix_attempts: usize,
+        #[arg(long)]
+        max_fix_attempts: Option<usize>,
         
         #[arg(long)]
         show_full_output: bool,
@@ -64,11 +64,30 @@ enum Commands {
 
 fn get_c2rust_home() -> Result<PathBuf, String> {
     match env::var("C2RUST_HOME") {
-        Ok(home) => Ok(PathBuf::from(home)),
+        Ok(home) => {
+            let path = PathBuf::from(home);
+            if !path.exists() {
+                return Err(format!(
+                    "Error: C2RUST_HOME directory does not exist: {}\n\
+Please set C2RUST_HOME to the root directory of your c2rust installation.\n\
+Example: export C2RUST_HOME=/path/to/c2rust",
+                    path.display()
+                ));
+            }
+            let bin_dir = path.join("bin");
+            if !bin_dir.exists() {
+                return Err(format!(
+                    "Error: $C2RUST_HOME/bin directory does not exist: {}\n\
+Please ensure the bin directory exists in your c2rust installation.",
+                    bin_dir.display()
+                ));
+            }
+            Ok(path)
+        }
         Err(_) => Err(
             "Error: C2RUST_HOME environment variable is not set.\n\
-             Please set C2RUST_HOME to the root directory of your c2rust installation.\n\
-             Example: export C2RUST_HOME=/path/to/c2rust".to_string()
+Please set C2RUST_HOME to the root directory of your c2rust installation.\n\
+Example: export C2RUST_HOME=/path/to/c2rust".to_string()
         ),
     }
 }
@@ -170,15 +189,19 @@ fn main() {
         Commands::Translate { feature, allow_all, max_fix_attempts, show_full_output } => {
             let mut args = Vec::new();
             
-            args.push("--feature".to_string());
-            args.push(feature);
+            if let Some(f) = feature {
+                args.push("--feature".to_string());
+                args.push(f);
+            }
             
             if allow_all {
                 args.push("--allow-all".to_string());
             }
             
-            args.push("--max-fix-attempts".to_string());
-            args.push(max_fix_attempts.to_string());
+            if let Some(attempts) = max_fix_attempts {
+                args.push("--max-fix-attempts".to_string());
+                args.push(attempts.to_string());
+            }
             
             if show_full_output {
                 args.push("--show-full-output".to_string());

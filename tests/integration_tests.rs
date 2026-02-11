@@ -4,11 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 
 fn get_binary_path() -> PathBuf {
-    let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("target");
-    path.push("debug");
-    path.push("c2rust");
-    path
+    PathBuf::from(env!("CARGO_BIN_EXE_c2rust"))
 }
 
 #[test]
@@ -103,7 +99,8 @@ fn test_translate_help() {
 fn test_tool_not_found() {
     // Create a temporary directory as C2RUST_HOME
     let temp_dir = std::env::temp_dir().join(format!("c2rust_test_{}", std::process::id()));
-    fs::create_dir_all(&temp_dir).expect("Failed to create temporary C2RUST_HOME directory");
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create temporary C2RUST_HOME directory");
     
     let output = Command::new(get_binary_path())
         .arg("init")
@@ -113,7 +110,8 @@ fn test_tool_not_found() {
     
     assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
-    assert!(stderr.contains("Tool 'c2rust-init' not found"));
+    let expected_tool = format!("Tool 'c2rust-init{}' not found", env::consts::EXE_SUFFIX);
+    assert!(stderr.contains(&expected_tool));
     
     // Clean up
     if let Err(e) = fs::remove_dir_all(&temp_dir) {
@@ -191,6 +189,45 @@ fn test_translate_argument_forwarding() {
         assert!(stdout.contains("--max-fix-attempts"));
         assert!(stdout.contains("20"));
         assert!(stdout.contains("--show-full-output"));
+    }
+    
+    // Clean up
+    if let Err(e) = fs::remove_dir_all(&temp_dir) {
+        eprintln!("Failed to remove temporary directory {}: {}", temp_dir.display(), e);
+    }
+}
+
+#[test]
+fn test_build_requires_separator() {
+    // Test that build command correctly handles the -- separator
+    let temp_dir = std::env::temp_dir().join(format!("c2rust_test_separator_{}", std::process::id()));
+    let bin_dir = temp_dir.join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    #[cfg(unix)]
+    {
+        let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+        let script_path = bin_dir.join("c2rust-build");
+        fs::write(&script_path, mock_script).expect("Failed to write mock script");
+        
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&script_path).unwrap().permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&script_path, perms).unwrap();
+        
+        // Test with explicit -- separator (preferred usage)
+        let output = Command::new(get_binary_path())
+            .args(&["build", "--", "make", "all"])
+            .env("C2RUST_HOME", &temp_dir)
+            .output()
+            .expect("Failed to execute command");
+        
+        assert!(output.status.success());
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        // Should forward with -- separator to underlying tool
+        assert!(stdout.contains("--"));
+        assert!(stdout.contains("make"));
+        assert!(stdout.contains("all"));
     }
     
     // Clean up
