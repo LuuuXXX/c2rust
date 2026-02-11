@@ -120,6 +120,15 @@ Please ensure c2rust-{}{} is an executable file in $C2RUST_HOME/bin/",
     Ok(tool_path)
 }
 
+/// Runs a tool without any custom environment variables.
+/// This is a convenience wrapper around run_tool_with_env.
+///
+/// # Arguments
+/// * `tool_name` - The name of the tool to run (e.g., "init", "build")
+/// * `args` - Command line arguments to pass to the tool
+///
+/// # Returns
+/// The exit code of the tool process
 fn run_tool(tool_name: &str, args: &[String]) -> i32 {
     let tool_path = match get_tool_path(tool_name) {
         Ok(path) => path,
@@ -159,6 +168,16 @@ fn run_tool(tool_name: &str, args: &[String]) -> i32 {
     }
 }
 
+/// Runs a tool with custom environment variables.
+/// The tool is executed as a subprocess with the specified arguments and environment variables.
+///
+/// # Arguments
+/// * `tool_name` - The name of the tool to run (e.g., "build", "translate")
+/// * `args` - Command line arguments to pass to the tool
+/// * `env_vars` - Vector of (key, value) pairs for environment variables to set
+///
+/// # Returns
+/// The exit code of the tool process. On Unix, signals are mapped to 128+signal number.
 fn run_tool_with_env(tool_name: &str, args: &[String], env_vars: Vec<(&str, PathBuf)>) -> i32 {
     let tool_path = match get_tool_path(tool_name) {
         Ok(path) => path,
@@ -204,6 +223,18 @@ fn run_tool_with_env(tool_name: &str, args: &[String], env_vars: Vec<(&str, Path
     }
 }
 
+/// Gets the full path to a library file in C2RUST_HOME/lib.
+/// If the file doesn't exist, returns an error with a user-friendly message.
+/// Note: The error message starts with "Warning:" because missing libraries
+/// are treated as non-fatal - the tool will still execute but without the
+/// environment variable set.
+///
+/// # Arguments
+/// * `lib_name` - The name of the library file (e.g., "libhook.so")
+///
+/// # Returns
+/// * `Ok(PathBuf)` - The full path to the library if it exists
+/// * `Err(String)` - A warning message if the library doesn't exist
 fn get_lib_path(lib_name: &str) -> Result<PathBuf, String> {
     let c2rust_home = get_c2rust_home()?;
     let lib_path = c2rust_home.join("lib").join(lib_name);
@@ -220,6 +251,18 @@ Please ensure the library is installed in $C2RUST_HOME/lib/",
     Ok(lib_path)
 }
 
+/// Gets the full path to a directory in C2RUST_HOME/python.
+/// If the directory doesn't exist, returns an error with a user-friendly message.
+/// Note: The error message starts with "Warning:" because missing directories
+/// are treated as non-fatal - the tool will still execute but without the
+/// environment variable set.
+///
+/// # Arguments
+/// * `dir_name` - The name of the directory (e.g., "translate_and_fix")
+///
+/// # Returns
+/// * `Ok(PathBuf)` - The full path to the directory if it exists
+/// * `Err(String)` - A warning message if the directory doesn't exist
 fn get_python_dir(dir_name: &str) -> Result<PathBuf, String> {
     let c2rust_home = get_c2rust_home()?;
     let python_dir = c2rust_home.join("python").join(dir_name);
