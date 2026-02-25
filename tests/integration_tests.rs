@@ -109,6 +109,19 @@ fn test_translate_help() {
 }
 
 #[test]
+fn test_merge_help() {
+    let output = Command::new(get_binary_path())
+        .args(&["merge", "--help"])
+        .output()
+        .expect("Failed to execute command");
+
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("合并翻译后的 Rust 模块"));
+    assert!(stdout.contains("--feature"));
+}
+
+#[test]
 fn test_tool_not_found() {
     // Create a temporary directory as C2RUST_HOME
     let temp_dir = TempDir::new().expect("Failed to create temporary directory");
