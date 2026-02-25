@@ -4,13 +4,14 @@ A unified command-line tool for C to Rust translation and build management.
 
 ## Overview
 
-This tool integrates five c2rust subcommands into a single CLI interface:
+This tool integrates six c2rust subcommands into a single CLI interface:
 
 - **init** - Initialize a c2rust project structure
 - **build** - Execute C project build commands
 - **test** - Execute C project test commands
 - **clean** - Clean build artifacts
 - **translate** - Translate C code to Rust
+- **merge** - Merge translated Rust modules (executed after translate)
 
 ## Installation
 
@@ -23,6 +24,7 @@ This tool integrates five c2rust subcommands into a single CLI interface:
    - c2rust-test
    - c2rust-clean
    - c2rust-translate
+   - c2rust-merge
 
 ### Building from Source
 
@@ -32,7 +34,7 @@ cd c2rust
 cargo build --release
 ```
 
-The binary will be available at `target/release/c2rust` (or `c2rust.exe` on Windows).
+The binary will be available at `target/release/c2rust-xw` (or `c2rust-xw.exe` on Windows).
 
 ### Environment Setup
 
@@ -54,7 +56,7 @@ source ~/.bashrc
 ### General Syntax
 
 ```bash
-c2rust <COMMAND> [OPTIONS]
+c2rust-xw <COMMAND> [OPTIONS]
 ```
 
 ### Commands
@@ -64,7 +66,7 @@ c2rust <COMMAND> [OPTIONS]
 Initialize a `.c2rust` directory structure:
 
 ```bash
-c2rust init
+c2rust-xw init
 ```
 
 #### 2. Build
@@ -72,9 +74,9 @@ c2rust init
 Execute build commands for your C project:
 
 ```bash
-c2rust build -- make
-c2rust build --feature <name> -- make all
-c2rust build --no-interactive -- cmake --build .
+c2rust-xw build -- make
+c2rust-xw build --feature <name> -- make all
+c2rust-xw build --no-interactive -- cmake --build .
 ```
 
 **Options:**
@@ -87,8 +89,8 @@ c2rust build --no-interactive -- cmake --build .
 Execute test commands for your C project:
 
 ```bash
-c2rust test -- make test
-c2rust test --feature <name> -- ctest
+c2rust-xw test -- make test
+c2rust-xw test --feature <name> -- ctest
 ```
 
 **Options:**
@@ -100,8 +102,8 @@ c2rust test --feature <name> -- ctest
 Execute clean commands to remove build artifacts:
 
 ```bash
-c2rust clean -- make clean
-c2rust clean --feature <name> -- rm -rf build/
+c2rust-xw clean -- make clean
+c2rust-xw clean --feature <name> -- rm -rf build/
 ```
 
 **Options:**
@@ -113,11 +115,11 @@ c2rust clean --feature <name> -- rm -rf build/
 Translate C code to Rust:
 
 ```bash
-c2rust translate
-c2rust translate --feature <name>
-c2rust translate --allow-all
-c2rust translate --max-fix-attempts 20
-c2rust translate --show-full-output
+c2rust-xw translate
+c2rust-xw translate --feature <name>
+c2rust-xw translate --allow-all
+c2rust-xw translate --max-fix-attempts 20
+c2rust-xw translate --show-full-output
 ```
 
 **Options:**
@@ -126,38 +128,57 @@ c2rust translate --show-full-output
 - `--max-fix-attempts <n>` - Maximum number of fix attempts (optional, uses translator's default if omitted)
 - `--show-full-output` - Show full output during translation
 
+#### 6. Merge
+
+Merge translated Rust modules (executed after translate):
+
+```bash
+c2rust-xw merge
+c2rust-xw merge --feature <name>
+c2rust-xw merge <additional_args>
+```
+
+**Options:**
+- `--feature <name>` - Specify a feature name (optional)
+
 ## Examples
 
 ### Basic Workflow
 
 ```bash
 # 1. Initialize a c2rust project
-c2rust init
+c2rust-xw init
 
 # 2. Build your C project
-c2rust build -- make
+c2rust-xw build -- make
 
 # 3. Run tests
-c2rust test -- make test
+c2rust-xw test -- make test
 
 # 4. Translate to Rust
-c2rust translate
+c2rust-xw translate
 
-# 5. Clean up
-c2rust clean -- make clean
+# 5. Merge translated modules
+c2rust-xw merge
+
+# 6. Clean up
+c2rust-xw clean -- make clean
 ```
 
 ### Advanced Usage
 
 ```bash
 # Build with a specific feature
-c2rust build --feature experimental -- make all
+c2rust-xw build --feature experimental -- make all
 
 # Translate with custom settings
-c2rust translate --feature advanced --max-fix-attempts 20 --allow-all
+c2rust-xw translate --feature advanced --max-fix-attempts 20 --allow-all
+
+# Merge with a specific feature
+c2rust-xw merge --feature advanced
 
 # Non-interactive build
-c2rust build --no-interactive -- cmake --build .
+c2rust-xw build --no-interactive -- cmake --build .
 ```
 
 ## Error Handling
@@ -203,14 +224,14 @@ cargo test
 
 ```bash
 cargo build
-./target/debug/c2rust --help
+./target/debug/c2rust-xw --help
 ```
 
 ### Building for Release
 
 ```bash
 cargo build --release
-./target/release/c2rust --help
+./target/release/c2rust-xw --help
 ```
 
 ## Related Projects
@@ -220,6 +241,7 @@ cargo build --release
 - [c2rust-test](https://github.com/LuuuXXX/c2rust-test) - Test C projects
 - [c2rust-clean](https://github.com/LuuuXXX/c2rust-clean) - Clean build artifacts
 - [c2rust-translate](https://github.com/LuuuXXX/c2rust-translate) - Translate C to Rust
+- [c2rust-merge](https://github.com/LuuuXXX/c2rust-merge) - Merge translated Rust modules
 
 ## License
 

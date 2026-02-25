@@ -28,7 +28,7 @@ fn get_lib_filename(base_name: &str) -> String {
 
 
 #[derive(Parser)]
-#[command(name = "c2rust")]
+#[command(name = "c2rust-xw")]
 #[command(about = "C to Rust translation and build tool")]
 struct Cli {
     #[command(subcommand)]
@@ -83,6 +83,15 @@ enum Commands {
         
         #[arg(long)]
         show_full_output: bool,
+    },
+    
+    /// 合并翻译后的 Rust 模块
+    Merge {
+        #[arg(long)]
+        feature: Option<String>,
+        
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        extra_args: Vec<String>,
     },
 }
 
@@ -403,6 +412,20 @@ fn main() {
             }
             
             run_tool_with_env("translate", &args, &env_vars)
+        }
+        
+        Commands::Merge { feature, extra_args } => {
+            let mut args = Vec::new();
+            args.push("merge".to_string());
+            
+            if let Some(f) = feature {
+                args.push("--feature".to_string());
+                args.push(f);
+            }
+            
+            args.extend(extra_args);
+            
+            run_tool("merge", &args)
         }
     };
     
