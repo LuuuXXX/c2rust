@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use tempfile::TempDir;
 
 fn get_binary_path() -> PathBuf {
-    PathBuf::from(env!("CARGO_BIN_EXE_c2rust"))
+    PathBuf::from(env!("CARGO_BIN_EXE_c2rust-xw"))
 }
 
 /// Returns the platform-specific dynamic library file extension for tests
@@ -34,6 +34,7 @@ fn test_help_command() {
     assert!(stdout.contains("test"));
     assert!(stdout.contains("clean"));
     assert!(stdout.contains("translate"));
+    assert!(stdout.contains("merge"));
 }
 
 #[test]
@@ -482,6 +483,39 @@ fn test_clean_argument_forwarding() {
     assert!(stdout.contains("--feature"));
     assert!(stdout.contains("clean_feature"));
     assert!(stdout.contains("make"));
+    
+    // temp_dir is automatically cleaned up when it goes out of scope
+}
+
+#[test]
+#[cfg(unix)]
+fn test_merge_argument_forwarding() {
+    // Create a temporary directory as C2RUST_HOME with a mock merge tool
+    let temp_dir = TempDir::new().expect("Failed to create temporary directory");
+    let bin_dir = temp_dir.path().join("bin");
+    fs::create_dir_all(&bin_dir).expect("Failed to create bin directory");
+    
+    // Create a mock c2rust-merge script that echoes its arguments
+    let mock_script = "#!/bin/sh\necho \"Args: $@\"\n";
+    let script_path = bin_dir.join("c2rust-merge");
+    fs::write(&script_path, mock_script).expect("Failed to write mock script");
+    
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = fs::metadata(&script_path).unwrap().permissions();
+    perms.set_mode(0o755);
+    fs::set_permissions(&script_path, perms).unwrap();
+    
+    let output = Command::new(get_binary_path())
+        .args(&["merge", "--feature", "merge_feature"])
+        .env("C2RUST_HOME", temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+    
+    assert!(output.status.success(), "Command failed with stderr: {}", String::from_utf8_lossy(&output.stderr));
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(stdout.contains("merge"), "Expected 'merge' subcommand in output");
+    assert!(stdout.contains("--feature"));
+    assert!(stdout.contains("merge_feature"));
     
     // temp_dir is automatically cleaned up when it goes out of scope
 }
